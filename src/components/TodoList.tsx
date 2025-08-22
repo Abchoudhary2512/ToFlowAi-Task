@@ -96,6 +96,7 @@ export default function TodoList() {
     const transformedTodos =
       data?.map((todo) => ({
         ...todo,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         labels: todo.labels?.map((tl: any) => tl.labels).filter(Boolean) || [],
       })) || [];
 
@@ -178,7 +179,7 @@ export default function TodoList() {
 
     if (editingId) {
       // Update todo
-      const { data: todoData, error: todoError } = await supabase
+      const { error: todoError } = await supabase
         .from("todos")
         .update({
           title,
