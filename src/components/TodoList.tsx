@@ -69,14 +69,11 @@ export default function TodoList() {
       resetForm();
     } else {
       // Create
-      const { data,error } = await supabase
+      const { data } = await supabase
         .from("todos")
         .insert([{ title, description, due_date: dueDate }])
         .select();
-      if (error) {
-        console.error("Insert error:", error);
-        return;
-      }
+
       if (data) {
         setTodos((prev) => [data[0] as Todo, ...prev]);
       }
@@ -95,7 +92,9 @@ export default function TodoList() {
       return;
     }
     if (data) {
-      setTodos((prev) => prev.map((t) => (t.id === id ? (data[0] as Todo) : t)));
+      setTodos((prev) =>
+        prev.map((t) => (t.id === id ? (data[0] as Todo) : t))
+      );
     }
   };
 
