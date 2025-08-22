@@ -29,10 +29,11 @@ export default function TodoList() {
   const [dueDate, setDueDate] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [filterUserId, setFilterUserId] = useState<string>(""); // new filter state
 
   useEffect(() => {
-    fetchTodos();
-    fetchUsers();
+    fetchTodos(); // it will fetch all the todos from the supbase db(todos tables)
+    fetchUsers(); // all the users from the profile table
   }, []);
 
   const fetchUsers = async () => {
@@ -167,6 +168,11 @@ export default function TodoList() {
     (u) => !assignedIds.includes(u.id) || u.id === assigneeId
   );
 
+  // filter todos by selected user
+  const filteredTodos = filterUserId
+    ? todos.filter((t) => t.assignee_id === filterUserId)
+    : todos;
+
   return (
     <div className="max-w-xl mx-auto space-y-6 mt-8">
       {/* Form */}
@@ -217,9 +223,26 @@ export default function TodoList() {
         </div>
       </Card>
 
+      {/* Filter Dropdown */}
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-600">Filter by Assignee:</label>
+        <select
+          value={filterUserId}
+          onChange={(e) => setFilterUserId(e.target.value)}
+          className="border rounded p-2"
+        >
+          <option value="">All</option>
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* List */}
       <div className="space-y-3">
-        {todos.map((todo) => (
+        {filteredTodos.map((todo) => (
           <Card key={todo.id} className="p-3">
             <CardContent className="p-0 flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -266,15 +289,15 @@ export default function TodoList() {
               )}
               {todo.assignee && (
                 <p className="text-xs text-gray-500">
-                  👤 Assigned to: {todo.assignee.name}
+                  🙎‍♂️ Assigned to: {todo.assignee.name}
                 </p>
               )}
             </CardContent>
           </Card>
         ))}
-        {todos.length === 0 && (
+        {filteredTodos.length === 0 && (
           <p className="text-center text-sm text-gray-500">
-            No todos yet. Add one above!
+            No todos found for this filter.
           </p>
         )}
       </div>
