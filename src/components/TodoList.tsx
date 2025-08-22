@@ -5,6 +5,13 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Profile = {
   id: string;
@@ -29,8 +36,7 @@ export default function TodoList() {
   const [dueDate, setDueDate] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [filterUserId, setFilterUserId] = useState<string>(""); // new filter state
-
+  const [filterUserId, setFilterUserId] = useState<string>("");
   useEffect(() => {
     fetchTodos(); // it will fetch all the todos from the supbase db(todos tables)
     fetchUsers(); // all the users from the profile table
@@ -161,14 +167,13 @@ export default function TodoList() {
   };
 
   const assignedIds = todos
-    .filter((t) => !editingId || t.id !== editingId) // allow current assignee when editing
+    .filter((t) => !editingId || t.id !== editingId)
     .map((t) => t.assignee_id);
 
   const availableUsers = users.filter(
     (u) => !assignedIds.includes(u.id) || u.id === assigneeId
   );
 
-  // filter todos by selected user
   const filteredTodos = filterUserId
     ? todos.filter((t) => t.assignee_id === filterUserId)
     : todos;
@@ -197,19 +202,21 @@ export default function TodoList() {
         />
 
         {/* Assignee Dropdown */}
-        <select
-          value={assigneeId}
-          onChange={(e) => setAssigneeId(e.target.value)}
-          className="border rounded p-2 w-full"
-          required
+        <Select
+          value={assigneeId || undefined}
+          onValueChange={(val) => setAssigneeId(val)}
         >
-          <option value="">Select Assignee</option>
-          {availableUsers.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select Assignee" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableUsers.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <div className="flex gap-2">
           <Button type="button" onClick={saveTodo}>
@@ -226,18 +233,21 @@ export default function TodoList() {
       {/* Filter Dropdown */}
       <div className="flex items-center gap-2">
         <label className="text-sm text-gray-600">Filter by Assignee:</label>
-        <select
-          value={filterUserId}
-          onChange={(e) => setFilterUserId(e.target.value)}
-          className="border rounded p-2"
+        <Select
+          value={filterUserId || undefined}
+          onValueChange={(val) => setFilterUserId(val)}
         >
-          <option value="">All</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Assignees" />
+          </SelectTrigger>
+          <SelectContent>
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* List */}
