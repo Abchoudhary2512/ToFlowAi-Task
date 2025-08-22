@@ -6,29 +6,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 
+type Profile = {
+  id: string;
+  name: string;
+};
+
 type Todo = {
   id: number;
   title: string;
   description: string | null;
   due_date: string | null;
   completed: boolean;
+  assignee_id: string;
+  assignee?: Profile; // joined
 };
 
 export default function TodoList() {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchTodos();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from("profiles").select("id, name");
+    if (error) {
+      console.error("User fetch error:", error);
+      return;
+    }
+    setUsers(data || []);
+  };
 
   const fetchTodos = async () => {
     const { data, error } = await supabase
       .from("todos")
-      .select("*")
+      .select("*, assignee:profiles(id, name)")
       .order("id", { ascending: false });
     if (error) {
       console.error("Fetch error:", error);
@@ -41,6 +60,7 @@ export default function TodoList() {
     setTitle("");
     setDescription("");
     setDueDate("");
+    setAssigneeId("");
     setEditingId(null);
   };
 
@@ -50,15 +70,26 @@ export default function TodoList() {
       return;
     }
 
+    if (!assigneeId) {
+      alert("Assignee is required");
+      return;
+    }
+
     if (editingId) {
       // Update
       const { data, error } = await supabase
         .from("todos")
-        .update({ title, description, due_date: dueDate })
+        .update({
+          title,
+          description,
+          due_date: dueDate,
+          assignee_id: assigneeId,
+        })
         .eq("id", editingId)
-        .select();
+        .select("*, assignee:profiles(id, name)");
       if (error) {
         console.error("Update error:", error);
+        alert(error.message);
         return;
       }
       if (data) {
@@ -69,10 +100,23 @@ export default function TodoList() {
       resetForm();
     } else {
       // Create
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("todos")
-        .insert([{ title, description, due_date: dueDate }])
-        .select();
+        .insert([
+          {
+            title,
+            description,
+            due_date: dueDate,
+            assignee_id: assigneeId,
+          },
+        ])
+        .select("*, assignee:profiles(id, name)");
+
+      if (error) {
+        console.error("Insert error:", error);
+        alert(error.message);
+        return;
+      }
 
       if (data) {
         setTodos((prev) => [data[0] as Todo, ...prev]);
@@ -86,7 +130,7 @@ export default function TodoList() {
       .from("todos")
       .update({ completed: !completed })
       .eq("id", id)
-      .select();
+      .select("*, assignee:profiles(id, name)");
     if (error) {
       console.error("Toggle error:", error);
       return;
@@ -102,6 +146,7 @@ export default function TodoList() {
     setTitle(todo.title);
     setDescription(todo.description || "");
     setDueDate(todo.due_date || "");
+    setAssigneeId(todo.assignee_id || "");
     setEditingId(todo.id);
   };
 
@@ -113,6 +158,14 @@ export default function TodoList() {
     }
     setTodos((prev) => prev.filter((t) => t.id !== id));
   };
+
+  const assignedIds = todos
+    .filter((t) => !editingId || t.id !== editingId) // allow current assignee when editing
+    .map((t) => t.assignee_id);
+
+  const availableUsers = users.filter(
+    (u) => !assignedIds.includes(u.id) || u.id === assigneeId
+  );
 
   return (
     <div className="max-w-xl mx-auto space-y-6 mt-8">
@@ -136,6 +189,22 @@ export default function TodoList() {
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
         />
+
+        {/* Assignee Dropdown */}
+        <select
+          value={assigneeId}
+          onChange={(e) => setAssigneeId(e.target.value)}
+          className="border rounded p-2 w-full"
+          required
+        >
+          <option value="">Select Assignee</option>
+          {availableUsers.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
+
         <div className="flex gap-2">
           <Button type="button" onClick={saveTodo}>
             {editingId ? "Update" : "Add"}
@@ -193,6 +262,11 @@ export default function TodoList() {
               {todo.due_date && (
                 <p className="text-xs text-gray-500">
                   📅 Due: {new Date(todo.due_date).toLocaleDateString()}
+                </p>
+              )}
+              {todo.assignee && (
+                <p className="text-xs text-gray-500">
+                  👤 Assigned to: {todo.assignee.name}
                 </p>
               )}
             </CardContent>
