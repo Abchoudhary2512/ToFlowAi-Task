@@ -234,13 +234,17 @@ export default function TodoList() {
       <div className="flex items-center gap-2">
         <label className="text-sm text-gray-600">Filter by Assignee:</label>
         <Select
-          value={filterUserId || undefined}
-          onValueChange={(val) => setFilterUserId(val)}
+          value={filterUserId || "all"}
+          onValueChange={
+            (val) => setFilterUserId(val === "all" ? "" : val) // empty string means no filter
+          }
         >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="All Assignees" />
           </SelectTrigger>
           <SelectContent>
+            {/* “Clear Filter” option */}
+            <SelectItem value="all">All Assignees</SelectItem>
             {users.map((user) => (
               <SelectItem key={user.id} value={user.id}>
                 {user.name}
