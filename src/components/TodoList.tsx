@@ -48,6 +48,8 @@ export default function TodoList() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filterUserId, setFilterUserId] = useState<string>("");
   const [filterLabelIds, setFilterLabelIds] = useState<string[]>([]);
+  const [isLabelDropdownOpen, setIsLabelDropdownOpen] = useState(false);
+  const [isFilterLabelDropdownOpen, setIsFilterLabelDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchTodos(); // it will fetch all the todos from the supbase db(todos tables)
@@ -92,7 +94,10 @@ export default function TodoList() {
       return;
     }
 
+    
     // Transform the data to flatten labels
+    //here we get the reponse as nested and to get the required data we flatten it
+    //(as we have the many-2-many relationship)
     const transformedTodos =
       data?.map((todo) => ({
         ...todo,
@@ -139,7 +144,6 @@ export default function TodoList() {
       return null;
     }
 
-    // Update local labels state
     setLabels((prev) =>
       [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
     );
@@ -154,6 +158,7 @@ export default function TodoList() {
     }
   };
 
+  //simple enter the label name and then hit enter , the label adds
   const handleNewLabelKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -340,7 +345,7 @@ export default function TodoList() {
     // Filter by assignee
     const matchesAssignee = !filterUserId || todo.assignee_id === filterUserId;
 
-    // Filter by labels (AND logic - todo must have ALL selected labels)
+    // Filter by labels 
     const matchesLabels =
       filterLabelIds.length === 0 ||
       filterLabelIds.every((filterLabelId) =>
@@ -416,34 +421,49 @@ export default function TodoList() {
             </Button>
           </div>
 
-          {/* Existing Labels Checkboxes */}
-          <div
-            className={`border rounded-md p-3 max-h-40 overflow-y-auto ${
-              selectedLabelIds.length === 0
-                ? "border-red-300 bg-red-50"
-                : "border-gray-200"
-            }`}
-          >
-            {labels.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No labels available. Create one above!
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {labels.map((label) => (
-                  <label
-                    key={label.id}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedLabelIds.includes(label.id)}
-                      onChange={() => handleLabelToggle(label.id)}
-                      className="rounded"
-                    />
-                    <span className="text-sm">{label.name}</span>
-                  </label>
-                ))}
+          {/* Labels Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              className={`flex w-full justify-between items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                selectedLabelIds.length === 0
+                  ? "border-red-300 bg-red-50"
+                  : "border-gray-200"
+              }`}
+              onClick={() => setIsLabelDropdownOpen(!isLabelDropdownOpen)}
+            >
+              <span className="truncate">
+                {selectedLabelIds.length > 0
+                  ? `${selectedLabelIds.length} label(s) selected`
+                  : "Select labels"}
+              </span>
+              <span>▼</span>
+            </button>
+
+            {isLabelDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="p-2 space-y-1">
+                  {labels.length === 0 ? (
+                    <p className="text-sm text-gray-500 p-2">
+                      No labels available. Create one above!
+                    </p>
+                  ) : (
+                    labels.map((label) => (
+                      <label
+                        key={label.id}
+                        className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedLabelIds.includes(label.id)}
+                          onChange={() => handleLabelToggle(label.id)}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{label.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -530,25 +550,46 @@ export default function TodoList() {
         {/* Label Filter */}
         <div className="space-y-2">
           <label className="text-sm text-gray-600">Filter by Labels :</label>
-          <div className="border rounded-md p-3 max-h-32 overflow-y-auto bg-gray-50">
-            {labels.length === 0 ? (
-              <p className="text-sm text-gray-500">No labels available</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {labels.map((label) => (
-                  <label
-                    key={label.id}
-                    className="flex items-center gap-2 cursor-pointer text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={filterLabelIds.includes(label.id)}
-                      onChange={() => handleFilterLabelToggle(label.id)}
-                      className="rounded"
-                    />
-                    <span className="truncate">{label.name}</span>
-                  </label>
-                ))}
+          
+          {/* Filter Labels Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              className="flex w-full justify-between items-center rounded-md border border-gray-200 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              onClick={() => setIsFilterLabelDropdownOpen(!isFilterLabelDropdownOpen)}
+            >
+              <span className="truncate">
+                {filterLabelIds.length > 0
+                  ? `${filterLabelIds.length} label(s) selected`
+                  : "Select labels to filter"}
+              </span>
+              <span>▼</span>
+            </button>
+
+            {isFilterLabelDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="p-2 space-y-1">
+                  {labels.length === 0 ? (
+                    <p className="text-sm text-gray-500 p-2">No labels available</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {labels.map((label) => (
+                        <label
+                          key={label.id}
+                          className="flex items-center gap-2 cursor-pointer p-1 hover:bg-gray-100 rounded text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filterLabelIds.includes(label.id)}
+                            onChange={() => handleFilterLabelToggle(label.id)}
+                            className="rounded"
+                          />
+                          <span className="truncate">{label.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
